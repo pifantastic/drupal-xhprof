@@ -54,25 +54,27 @@ function xhprof_exit() {
   $xhprof_data = xhprof_disable();
   
   // Include xhprof utils
-  module_load_include('php', 'xhprof', '/xhprof_lib/utils/xhprof_lib.php');
-  module_load_include('php', 'xhprof', '/xhprof_lib/utils/xhprof_runs.php');
-  
+  include_once drupal_get_path('module', 'xhprof') . '/xhprof_lib/utils/xhprof_lib.php';
+  include_once drupal_get_path('module', 'xhprof') . '/xhprof_lib/utils/xhprof_runs.php';
+
   // Generate xhprof run file
   $xhprof_runs = new XHProfRuns_Default();
   $run_id = $xhprof_runs->save_run($xhprof_data, "xhprof_run");
-  
+
   // Record this run to the database
-  db_query("INSERT INTO {xhprof_runs} (run_id, data, created) VALUES (%d, '%s', %d)", $run_id, $xhprof_data, time());
+  db_query("INSERT INTO {xhprof_runs} (run_id, data, created) VALUES ('%s', '%s', %d)", $run_id, serialize($xhprof_data), time());
 }
 
 function xhprof_runs_view() {
+  global $base_url;
+
   $header = array();
   $header[] = array('data' => 'Run ID');
   $header[] = array('data' => 'Created');
   
   $rows = array();
   
-  $xhprof_url = '/' . drupal_get_path('module', 'xhprof') . "/xhprof_html/index.php?run=%d&source=xhprof_run";
+  $xhprof_url = $base_url . '/' . drupal_get_path('module', 'xhprof') . "/xhprof_html/index.php?run=%s&source=xhprof_run";
   
   $result = db_query('SELECT * from {xhprof_runs}');
   while ($data = db_fetch_object($result)) {

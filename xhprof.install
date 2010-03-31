@@ -28,10 +28,10 @@ function xhprof_schema() {
     'description' => t('Stores xhprof runs.'),
     'fields' => array(
       'run_id' => array(
-        'type' => 'int',
-        'unsigned' => TRUE,
+        'type' => 'varchar',
+        'length' => 32,
         'not null' => TRUE,
-        'default' => 0,
+        'default' => '',
         'description' => t('The run ID for this xhprof run.'),
       ),
       'data' => array(
