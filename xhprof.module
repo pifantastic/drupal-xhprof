@@ -47,11 +47,13 @@ function xhprof_menu() {
  * Implementation of hook_boot().
  */
 function xhprof_boot() {
-  if (!function_exists("xhprof_enable")) {
+  if (!extension_loaded('xhprof') or !function_exists("xhprof_enable")) {
     return;
   }
   
+  // So we don't waste time checking again on xhprof_exit()  
   global $xhprof_profiling_enabled;
+
   if (xhprof_profiling_enabled()) {
     xhprof_enable();
     $xhprof_profiling_enabled = true;
@@ -70,7 +72,6 @@ function xhprof_exit() {
   
   // Stop profiling and retrieve profile data
   $xhprof_data = xhprof_disable();
-  krumo($xhprof_data);
   
   // Include xhprof utils
   include_once drupal_get_path('module', 'xhprof') . '/xhprof_lib/utils/xhprof_lib.php';
@@ -85,8 +86,7 @@ function xhprof_exit() {
     INSERT INTO {xhprof_runs} 
       (run_id, url, data, time, created) 
     VALUES 
-      ('%s', '%s', '%s', %d, %d)
-  ";
+      ('%s', '%s', '%s', %d, %d)";
   db_query($query, $run_id, $_GET['q'], serialize($xhprof_data), $xhprof_data['main()']['wt'], time());
 }
 
@@ -155,8 +155,10 @@ function xhprof_profiling_enabled() {
     return false;
   }
 
-  return (bool) (drupal_match_path($_GET['q'], variable_get("xhprof_include_paths", '')) 
-      and !drupal_match_path($_GET['q'], variable_get("xhprof_exclude_paths", '')));
+  $path = drupal_get_path_alias($_GET['q']);
+
+  return (bool) (drupal_match_path($path, variable_get("xhprof_include_paths", '')) 
+      and !drupal_match_path($path, variable_get("xhprof_exclude_paths", '')));
 }
 
 
