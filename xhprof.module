@@ -121,7 +121,7 @@ function xhprof_runs_view() {
   
   $xhprof_url = $base_url . '/' . drupal_get_path('module', 'xhprof') . "/xhprof_html/index.php?run=%s&source=xhprof_run";
   
-  $result = db_query('SELECT * from {xhprof_runs} ORDER BY created DESC');
+  $result = db_query('SELECT * from {xhprof_runs} '.tablesort_sql($header));
   while ($data = db_fetch_object($result)) {
     $row = array();
     $row[] = array('data' => '<a href="'.sprintf($xhprof_url, $data->run_id).'">'.$data->run_id.'</a>');
@@ -130,7 +130,7 @@ function xhprof_runs_view() {
     $row[] = array('data' => $data->created);
     $rows[] = $row;
   }
-
+  
   return theme_table($header, $rows);
 }
 
