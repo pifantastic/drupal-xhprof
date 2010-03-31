@@ -1,0 +1,87 @@
+<?php
+
+// $Id$
+
+/**
+ * @file
+ */
+
+/**
+ * Implementation of hook_menu().
+ */
+function xhprof_menu() {
+  $items['admin/settings/xhprof'] = array(
+		'title' => 'xhprof Settings',
+		'description' => 'xhprof Settings',
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('xhprof_admin_settings'),
+		'access arguments' => array('administer site configuration'),
+		'type' => MENU_NORMAL_ITEM,
+		'file' => 'xhprof.admin.inc'
+	);
+	
+  $items['admin/xhprof/runs'] = array(
+		'title' => 'xhprof Runs',
+		'description' => 'xhprof Runs',
+		'page callback' => 'xhprof_runs_view',
+		'access arguments' => array('administer site configuration'),
+		'type' => MENU_NORMAL_ITEM,
+	);
+	
+	return $items;
+}
+
+/**
+ * Implementation of hook_boot().
+ */
+function xhprof_boot() {
+  if (!function_exists("xhprof_enable")) {
+    return;
+  }
+  
+  xhprof_enable();
+}
+
+/**
+ * Implementation of hook_exit().
+ */
+function xhprof_exit() {
+  if (!function_exists("xhprof_disable")) {
+    return;
+  }
+  
+  // Stop profiling and retrieve profile data
+  $xhprof_data = xhprof_disable();
+  
+  // Include xhprof utils
+  module_load_include('php', 'xhprof', '/xhprof_lib/utils/xhprof_lib.php');
+  module_load_include('php', 'xhprof', '/xhprof_lib/utils/xhprof_runs.php');
+  
+  // Generate xhprof run file
+  $xhprof_runs = new XHProfRuns_Default();
+  $run_id = $xhprof_runs->save_run($xhprof_data, "xhprof_run");
+  
+  // Record this run to the database
+  db_query("INSERT INTO {xhprof_runs} (run_id, data, created) VALUES (%d, '%s', %d)", $run_id, $xhprof_data, time());
+}
+
+function xhprof_runs_view() {
+  $header = array();
+  $header[] = array('data' => 'Run ID');
+  $header[] = array('data' => 'Created');
+  
+  $rows = array();
+  
+  $xhprof_url = '/' . drupal_get_path('module', 'xhprof') . "/xhprof_html/index.php?run=%d&source=xhprof_run";
+  
+  $result = db_query('SELECT * from {xhprof_runs}');
+  while ($data = db_fetch_object($result)) {
+    $row = array();
+    $row[] = array('data' => '<a href="'.sprintf($xhprof_url, $data->run_id).'">'.$data->run_id.'</a>');
+    $row[] = array('data' => $data->created);
+    $rows[] = $row;
+  }
+
+  return theme_table($header, $rows);
+}
+
