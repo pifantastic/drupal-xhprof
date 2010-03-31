@@ -6,28 +6,40 @@
  * @file
  */
 
+$xhprof_profiling_enabled = false;
+
 /**
  * Implementation of hook_menu().
  */
 function xhprof_menu() {
   $items['admin/settings/xhprof'] = array(
-		'title' => 'xhprof Settings',
-		'description' => 'xhprof Settings',
-		'page callback' => 'drupal_get_form',
-		'page arguments' => array('xhprof_admin_settings'),
-		'access arguments' => array('administer site configuration'),
-		'type' => MENU_NORMAL_ITEM,
-		'file' => 'xhprof.admin.inc'
+    'title' => 'xhprof Settings',
+    'description' => 'xhprof Settings',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('xhprof_admin_settings'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM
 	);
 	
   $items['admin/xhprof/runs'] = array(
-		'title' => 'xhprof Runs',
-		'description' => 'xhprof Runs',
-		'page callback' => 'xhprof_runs_view',
-		'access arguments' => array('administer site configuration'),
-		'type' => MENU_NORMAL_ITEM,
+    'title' => 'xhprof Runs',
+    'description' => 'xhprof Runs',
+    'page callback' => 'xhprof_runs_view',
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM
 	);
 	
+  /*
+  $items['admin/xhprof/run/%'] = array(
+    'title' => 'xhprof Run Details',
+    'description' => 'xhprof Run Details',
+    'page callback' => 'xhprof_runs_view_details',
+    'page arguments' => array(3),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM
+	);
+  */
+
 	return $items;
 }
 
@@ -39,19 +51,26 @@ function xhprof_boot() {
     return;
   }
   
-  xhprof_enable();
+  global $xhprof_profiling_enabled;
+  if (xhprof_profiling_enabled()) {
+    xhprof_enable();
+    $xhprof_profiling_enabled = true;
+  }
 }
 
 /**
  * Implementation of hook_exit().
  */
 function xhprof_exit() {
-  if (!function_exists("xhprof_disable")) {
+  global $xhprof_profiling_enabled;
+  
+  if (!$xhprof_profiling_enabled) {
     return;
   }
   
   // Stop profiling and retrieve profile data
   $xhprof_data = xhprof_disable();
+  krumo($xhprof_data);
   
   // Include xhprof utils
   include_once drupal_get_path('module', 'xhprof') . '/xhprof_lib/utils/xhprof_lib.php';
@@ -62,28 +81,82 @@ function xhprof_exit() {
   $run_id = $xhprof_runs->save_run($xhprof_data, "xhprof_run");
 
   // Record this run to the database
-  db_query("INSERT INTO {xhprof_runs} (run_id, data, created) VALUES ('%s', '%s', %d)", $run_id, serialize($xhprof_data), time());
+  $query = "
+    INSERT INTO {xhprof_runs} 
+      (run_id, url, data, time, created) 
+    VALUES 
+      ('%s', '%s', '%s', %d, %d)
+  ";
+  db_query($query, $run_id, $_GET['q'], serialize($xhprof_data), $xhprof_data['main()']['wt'], time());
+}
+
+function xhprof_admin_settings() {
+  $form['xhprof_include_paths'] = array( 
+    '#type' => 'textarea',
+    '#title' => t('Paths to include in profiling'), 
+    '#default_value' => variable_get('xhprof_include_paths', NULL), 
+    '#description' => t('xhprof will profile this list of paths.'), 
+  );
+
+  $form['xhprof_exclude_paths'] = array( 
+    '#type' => 'textarea',
+    '#title' => t('Paths to exclude in profiling'), 
+    '#default_value' => variable_get('xhprof_exclude_paths', NULL), 
+    '#description' => t('xhprof will NOT profile this list of paths.'), 
+  );
+
+  return system_settings_form($form);
 }
 
 function xhprof_runs_view() {
   global $base_url;
 
   $header = array();
-  $header[] = array('data' => 'Run ID');
-  $header[] = array('data' => 'Created');
+  $header[] = array('data' => 'Run ID', 'field' => 'run_id');
+  $header[] = array('data' => 'Url', 'field' => 'url');
+  $header[] = array('data' => 'Total Time', 'field' => 'time');
+  $header[] = array('data' => 'Created', 'field' => 'created', 'sort' => 'desc');
   
   $rows = array();
   
   $xhprof_url = $base_url . '/' . drupal_get_path('module', 'xhprof') . "/xhprof_html/index.php?run=%s&source=xhprof_run";
   
-  $result = db_query('SELECT * from {xhprof_runs}');
+  $result = db_query('SELECT * from {xhprof_runs} ORDER BY created DESC');
   while ($data = db_fetch_object($result)) {
     $row = array();
     $row[] = array('data' => '<a href="'.sprintf($xhprof_url, $data->run_id).'">'.$data->run_id.'</a>');
+    $row[] = array('data' => '<a href="'.$base_url.'?q='.$data->url.'">'.$data->url.'</a>');
+    $row[] = array('data' => number_format($data->time / 1000) . ' ms');    
     $row[] = array('data' => $data->created);
     $rows[] = $row;
   }
 
   return theme_table($header, $rows);
 }
+
+/*
+function xhprof_runs_view_details($run_id) {
+  $_GET['run_id'] = $run_id;
+  $_GET['source'] = 'xhprof_run';  
+  include drupal_get_path('module', 'xhprof') . '/xhprof_html/index.php';
+  exit;
+  return $run_id;
+}
+*/
+
+function xhprof_profiling_enabled() {
+  require_once 'includes/path.inc';
+  
+  if (isset($_GET['XHPROF_ENABLED'])) {
+    return true;
+  }
+
+  if (isset($_GET['XHPROF_DISABLED'])) {
+    return false;
+  }
+
+  return (bool) (drupal_match_path($_GET['q'], variable_get("xhprof_include_paths", '')) 
+      and !drupal_match_path($_GET['q'], variable_get("xhprof_exclude_paths", '')));
+}
+
 
