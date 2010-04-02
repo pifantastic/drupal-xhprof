@@ -52,6 +52,24 @@ function xhprof_schema() {
         'not null' => TRUE,
         'default' => 0
       ),
+      'calls' => array(
+        'description' => t('Total number of function calls for this xhprof run.'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'memory' => array(
+        'description' => t('Change in memory for this xhprof run.'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'cpu' => array(
+        'description' => t('CPU usage for this xhprof run.'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0
+      ),
       'created' => array(
         'description' => t('A Unix timestamp indicating when this run was created.'),
         'type' => 'int',

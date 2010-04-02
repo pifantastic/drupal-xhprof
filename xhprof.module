@@ -70,7 +70,6 @@ function xhprof_exit() {
   
   // Stop profiling and retrieve profile data
   $xhprof_data = xhprof_disable();
-  //krumo($xhprof_data);
   
   // Include xhprof utils
   include_once drupal_get_path('module', 'xhprof') . '/xhprof_lib/utils/xhprof_lib.php';
@@ -79,16 +78,22 @@ function xhprof_exit() {
   // Generate xhprof run file
   $xhprof_runs = new XHProfRuns_Default();
   $run_id = $xhprof_runs->save_run($xhprof_data, "xhprof_run");
+  $total_calls = array_reduce($xhprof_data, 'xhprof_sum_calls');
+  $total_memory = array_reduce($xhprof_data, 'xhprof_sum_memory');
+  $total_cpu = array_reduce($xhprof_data, 'xhprof_sum_cpu');
 
   // Record this run to the database
   $query = "
     INSERT INTO {xhprof_runs} 
-      (run_id, url, data, time, created) 
+      (run_id, url, data, time, calls, memory, cpu, created) 
     VALUES 
-      ('%s', '%s', '%s', %d, %d)";
-  db_query($query, $run_id, $_GET['q'], serialize($xhprof_data), $xhprof_data['main()']['wt'], time());
+      ('%s', '%s', '%s', %d, %d, %d, %d, %d)";
+  db_query($query, $run_id, $_GET['q'], serialize($xhprof_data), $xhprof_data['main()']['wt'], $total_calls, $total_memory, $total_cpu, time());
 }
 
+/**
+ * xhprof admin settings
+ */
 function xhprof_admin_settings() {
   $form['xhprof_include_paths'] = array( 
     '#type' => 'textarea',
@@ -107,6 +112,41 @@ function xhprof_admin_settings() {
   return system_settings_form($form);
 }
 
+/**
+ * xhprof runs table form
+ */
+function xhprof_runs_view_form() {
+  $form = array();
+  $form['clear'] = array(
+    '#type' => 'submit',
+    '#value' => t('Clear All Runs'),
+    '#id' => 'xhprof-clear-runs'
+  );
+  $form['refresh'] = array(
+    '#type' => 'submit',
+    '#value' => t('Refresh'),
+    '#id' => 'xhprof-refresh-runs'
+  );
+  return $form;
+}
+
+/**
+ * xhprof runs table form submit handler
+ */
+function xhprof_runs_view_form_submit($form, &$form_state) {
+  $op = $form_state['clicked_button']['#value'];
+  
+  if ($op == t('Clear All Runs')) {
+    db_query("DELETE FROM {xhprof_runs}");
+    drupal_set_message('Cleared all xhprof runs');
+  } else if ($op == t('Refresh')) {
+    
+  }
+}
+
+/**
+ * xhprof runs table
+ */
 function xhprof_runs_view() {
   $content = array();
   
@@ -120,9 +160,12 @@ function xhprof_runs_view() {
   $header[] = array('data' => 'Run ID', 'field' => 'run_id');
   $header[] = array('data' => 'Url', 'field' => 'url');
   $header[] = array('data' => 'Total Time', 'field' => 'time');
+  $header[] = array('data' => 'Total Function Calls', 'field' => 'calls');
+  $header[] = array('data' => 'Memory', 'field' => 'memory');
+  $header[] = array('data' => 'CPU Cycles', 'field' => 'cpu');
   $header[] = array('data' => 'Created', 'field' => 'created', 'sort' => 'desc');
   
-  $query = 'SELECT run_id, url, time, created FROM {xhprof_runs} '.tablesort_sql($header);
+  $query = 'SELECT run_id, url, time, calls, memory, cpu, created FROM {xhprof_runs} '.tablesort_sql($header);
   $result = pager_query($query, 25);
   
   // Table rows
@@ -131,17 +174,24 @@ function xhprof_runs_view() {
     $row = array();
     $row[] = array('data' => l($data->run_id, 'admin/xhprof/run/'.$data->run_id));
     $row[] = array('data' => l($data->url, $data->url));
-    $row[] = array('data' => number_format($data->time / 1000) . ' ms');    
+    $row[] = array('data' => number_format($data->time / 1000) . ' ms');
+    $row[] = array('data' => number_format($data->calls));
+    $row[] = array('data' => number_format($data->memory / 1024) . ' KB');
+    $row[] = array('data' => number_format($data->cpu));    
     $row[] = array('data' => $data->created);
     $rows[] = $row;
   }
   
+  $content[] = drupal_get_form('xhprof_runs_view_form');
   $content[] = theme_table($header, $rows, $attributes);
   $content[] = theme_pager(NULL, 25);
   
   return implode("\n", $content);
 }
 
+/**
+ * xhprof run detail page
+ */
 function xhprof_runs_view_details($run_id) {
   global $base_url;  
   $content = array();
@@ -153,6 +203,9 @@ function xhprof_runs_view_details($run_id) {
   return implode("\n", $content);
 }
 
+/**
+ * Determines whether or not to profile the current request
+ */
 function xhprof_profiling_enabled() {
   require_once 'includes/path.inc';
   
@@ -169,5 +222,13 @@ function xhprof_profiling_enabled() {
   return (bool) (drupal_match_path($path, variable_get("xhprof_include_paths", '')) 
       and !drupal_match_path($path, variable_get("xhprof_exclude_paths", '')));
 }
+
+
+/**
+ * Calculate totals from an xhprof run
+ */
+function xhprof_sum_calls($total, $data) { return $total + $data['ct']; }
+function xhprof_sum_memory($total, $data) { return $total + $data['mu']; }
+function xhprof_sum_cpu($total, $data) { return $total + $data['cpu']; }
 
 
