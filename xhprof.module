@@ -29,7 +29,6 @@ function xhprof_menu() {
     'type' => MENU_NORMAL_ITEM
 	);
 	
-  /*
   $items['admin/xhprof/run/%'] = array(
     'title' => 'xhprof Run Details',
     'description' => 'xhprof Run Details',
@@ -38,7 +37,6 @@ function xhprof_menu() {
     'access arguments' => array('administer site configuration'),
     'type' => MENU_NORMAL_ITEM
 	);
-  */
 
 	return $items;
 }
@@ -55,7 +53,7 @@ function xhprof_boot() {
   global $xhprof_profiling_enabled;
 
   if (xhprof_profiling_enabled()) {
-    xhprof_enable();
+    xhprof_enable(XHPROF_FLAGS_CPU + XHPROF_FLAGS_MEMORY);
     $xhprof_profiling_enabled = true;
   }
 }
@@ -72,6 +70,7 @@ function xhprof_exit() {
   
   // Stop profiling and retrieve profile data
   $xhprof_data = xhprof_disable();
+  //krumo($xhprof_data);
   
   // Include xhprof utils
   include_once drupal_get_path('module', 'xhprof') . '/xhprof_lib/utils/xhprof_lib.php';
@@ -109,40 +108,50 @@ function xhprof_admin_settings() {
 }
 
 function xhprof_runs_view() {
-  global $base_url;
-
+  $content = array();
+  
+  drupal_add_js(drupal_get_path("module", "xhprof") . "/xhprof.js");
+  
+  // Table attributes
+  $attributes = array('id' => 'xhprof-runs-table');
+  
+  // Table header
   $header = array();
   $header[] = array('data' => 'Run ID', 'field' => 'run_id');
   $header[] = array('data' => 'Url', 'field' => 'url');
   $header[] = array('data' => 'Total Time', 'field' => 'time');
   $header[] = array('data' => 'Created', 'field' => 'created', 'sort' => 'desc');
   
+  $query = 'SELECT run_id, url, time, created FROM {xhprof_runs} '.tablesort_sql($header);
+  $result = pager_query($query, 25);
+  
+  // Table rows
   $rows = array();
-  
-  $xhprof_url = $base_url . '/' . drupal_get_path('module', 'xhprof') . "/xhprof_html/index.php?run=%s&source=xhprof_run";
-  
-  $result = db_query('SELECT * from {xhprof_runs} '.tablesort_sql($header));
   while ($data = db_fetch_object($result)) {
     $row = array();
-    $row[] = array('data' => '<a href="'.sprintf($xhprof_url, $data->run_id).'">'.$data->run_id.'</a>');
-    $row[] = array('data' => '<a href="'.$base_url.'?q='.$data->url.'">'.$data->url.'</a>');
+    $row[] = array('data' => l($data->run_id, 'admin/xhprof/run/'.$data->run_id));
+    $row[] = array('data' => l($data->url, $data->url));
     $row[] = array('data' => number_format($data->time / 1000) . ' ms');    
     $row[] = array('data' => $data->created);
     $rows[] = $row;
   }
   
-  return theme_table($header, $rows);
+  $content[] = theme_table($header, $rows, $attributes);
+  $content[] = theme_pager(NULL, 25);
+  
+  return implode("\n", $content);
 }
 
-/*
 function xhprof_runs_view_details($run_id) {
-  $_GET['run_id'] = $run_id;
-  $_GET['source'] = 'xhprof_run';  
-  include drupal_get_path('module', 'xhprof') . '/xhprof_html/index.php';
-  exit;
-  return $run_id;
+  global $base_url;  
+  $content = array();
+  
+  $xhprof_url = $base_url . '/' . drupal_get_path('module', 'xhprof') . "/xhprof_html/index.php?run=%s&source=xhprof_run";
+  
+  $content[] = l("View xhprof Report", sprintf($xhprof_url, $run_id));
+  
+  return implode("\n", $content);
 }
-*/
 
 function xhprof_profiling_enabled() {
   require_once 'includes/path.inc';
