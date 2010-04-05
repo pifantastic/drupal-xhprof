@@ -75,14 +75,16 @@ function xhprof_exit() {
   // Include xhprof utils
   include_once drupal_get_path('module', 'xhprof') . '/xhprof_lib/utils/xhprof_lib.php';
   include_once drupal_get_path('module', 'xhprof') . '/xhprof_lib/utils/xhprof_runs.php';
-
+  
   // Generate xhprof run file
   $xhprof_runs = new XHProfRuns_Default();
   $run_id = $xhprof_runs->save_run($xhprof_data, XHPROF_SOURCE);
+  
+  // Calculate run totals  
   $total_calls = array_reduce($xhprof_data, 'xhprof_sum_calls');
   $total_memory = array_reduce($xhprof_data, 'xhprof_sum_memory');
   $total_cpu = array_reduce($xhprof_data, 'xhprof_sum_cpu');
-
+  
   // Record this run to the database
   $query = "
     INSERT INTO {xhprof_runs} 
@@ -129,17 +131,18 @@ function xhprof_admin_settings() {
  * xhprof runs table form
  */
 function xhprof_runs_view_form() {
-  $form = array();
   $form['clear'] = array(
     '#type' => 'submit',
     '#value' => t('Clear All Runs'),
     '#id' => 'xhprof-clear-runs'
   );
+  
   $form['refresh'] = array(
     '#type' => 'submit',
     '#value' => t('Refresh'),
     '#id' => 'xhprof-refresh-runs'
   );
+  
   return $form;
 }
 
@@ -152,8 +155,6 @@ function xhprof_runs_view_form_submit($form, &$form_state) {
   if ($op == t('Clear All Runs')) {
     db_query("DELETE FROM {xhprof_runs}");
     drupal_set_message('Cleared all xhprof runs');
-  } else if ($op == t('Refresh')) {
-    
   }
 }
 
@@ -192,7 +193,7 @@ function xhprof_runs_view() {
     $row[] = array('data' => number_format($data->calls));
     $row[] = array('data' => number_format($data->memory / 1024) . ' KB');
     $row[] = array('data' => number_format($data->cpu));    
-    $row[] = array('data' => $data->created);
+    $row[] = array('data' => format_date($data->created, 'small'));
     $rows[] = $row;
   }
   
@@ -238,7 +239,6 @@ function xhprof_profiling_enabled() {
       and !drupal_match_path($path, variable_get("xhprof_exclude_paths", '')));
 }
 
-
 /**
  * Calculate totals from an xhprof run
  */
@@ -246,14 +246,17 @@ function xhprof_sum_calls($total, $data) { return $total + $data['ct']; }
 function xhprof_sum_memory($total, $data) { return $total + $data['mu']; }
 function xhprof_sum_cpu($total, $data) { return $total + $data['cpu']; }
 
-function xhprof_class_from_time($time)  {
-  if ($time < 300000) {
-    return "xhprof-green";
-  }
-  else if ($time < 1000000) {
-    return "xhprof-yellow";
-  }
-  else {
-    return "xhprof-red";
+/**
+ *  Return a class indicating the relative speed of $time
+ */
+function xhprof_class_from_time($time) {
+  switch ($time) {
+    case ($time > 1000000):
+      return 'xhprof-red';
+    case ($time > 300000):
+      return 'xhprof-yellow';
+    default:
+      return 'xhprof-green';
   }
 }
+
