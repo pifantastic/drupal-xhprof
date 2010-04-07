@@ -1,5 +1,5 @@
 ; $Id$
-name = xhprof
+name = XHProf
 description = XHProf is a function-level hierarchical profiler for PHP and has a simple HTML based navigational interface.
 core = 6.x
 package = Performance
