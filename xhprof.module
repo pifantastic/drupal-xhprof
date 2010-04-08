@@ -252,13 +252,16 @@ function xhprof_sum_cpu($total, $data) { return $total + $data['cpu']; }
  *  Return a class indicating the relative speed of $time
  */
 function xhprof_class_from_time($time) {
-  switch ($time) {
-    case ($time > 1000000):
-      return 'xhprof-red';
-    case ($time > 300000):
-      return 'xhprof-yellow';
-    default:
-      return 'xhprof-green';
+  $classes = array(
+    'xhprof-green' => 300000,
+    'xhprof-yellow' => 1000000,
+    'xhprof-red' => PHP_MAX_INT
+  );
+  
+  foreach ($classes as $class => $threshold) {
+    if ($time <= $threshold) {
+      return $class;
+    }
   }
 }
 
