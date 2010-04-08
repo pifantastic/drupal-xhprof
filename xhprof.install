@@ -7,6 +7,9 @@
 function xhprof_install() {
   // Use schema API to create database table.
   drupal_install_schema('xhprof');
+  
+  // Make sure profiling starts as early as possible
+  db_query("UPDATE {system} SET weight = %d WHERE name = '%s'", -99, 'XHProf');
 }
 
 /**
@@ -16,8 +19,8 @@ function xhprof_uninstall() {
   // Use schema API to delete database table.
   drupal_uninstall_schema('xhprof');
   
-  // Delete our module's variable from the variables table.
-  variable_del('xhprof_foo');
+  // Delete all XHProf variables from variables table.
+  db_query("DELETE FROM {variable} WHERE name LIKE '%s_%%'", 'XHProf');
 }
 
 /**
