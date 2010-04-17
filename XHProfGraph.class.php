@@ -1,7 +1,9 @@
 <?php
 
 class XHProfGraph {
-
+  
+  public $run;  
+  
   public $nodes = array();
   public $edges = array();
   
@@ -9,14 +11,16 @@ class XHProfGraph {
   public static $sortColumn = "ct";
 
   public function __construct($run) {
+    $this->run = $run;
+
     foreach ($run->data as $call => $data) {
-      list($parent_method, $child_method) = explode('==>', $call);
+      list($parent_fn, $child_fn) = explode('==>', $call);
       
-      $parent_node = new XHProfNode($parent_method, $data);
+      $parent_node = new XHProfNode($parent_fn, $data, $run->run_id);
       $this->addNode($parent_node);
       
-      if ($child_method) {
-        $child_node = new XHProfNode($child_method, $data);
+      if ($child_fn) {
+        $child_node = new XHProfNode($child_fn, $data, $run->run_id);
         $this->addNode($child_node);
         
         $edge = new XHProfEdge($parent_node, $child_node);
@@ -47,7 +51,7 @@ class XHProfGraph {
 
   public function findNode($node) {
     foreach ($this->nodes as $n) {
-      if ($node->method == $n->method) {
+      if ($node->fn == $n->fn) {
         return $n;
       }
     }
@@ -57,7 +61,7 @@ class XHProfGraph {
 
   public function findEdge($edge) {
     foreach ($this->edges as $e) {
-      if ($e->node1->method == $edge->node1->method and $e->node2->method == $edge->node2->method) {
+      if ($e->node1->fn == $edge->node1->fn and $e->node2->fn == $edge->node2->fn) {
         return $e;
       }
     }
@@ -65,29 +69,29 @@ class XHProfGraph {
     return FALSE;
   }
 
-  public function findChildren($method = "main()") {
+  public function findChildren($fn = "main()") {
     $connections = array();
     foreach ($this->edges as $edge) {
-      if ($edge->node1->method == $method) {
+      if ($edge->node1->fn == $fn) {
         $connections[] = $edge->node2;
       }
     }
     return $connections;
   }
   
-  public function findParents($method = "main()") {
+  public function findParents($fn = "main()") {
     $parents = array();    
     foreach ($this->edges as $edge) {
-      if ($edge->node2->method == $method) {
+      if ($edge->node2->fn == $fn) {
         $parents[] = $edge->node1;
       }
     }
     return $parents;
   }
 
-  public function nodeForMethod($method) {
+  public function nodeForFn($fn) {
     foreach ($this->nodes as $node) {
-      if ($node->method == $method) {
+      if ($node->fn == $fn) {
         return $node;
       }
     }
@@ -95,39 +99,57 @@ class XHProfGraph {
     return FALSE;
   }
   
-  public static function sortNodes($nodes = array(), $column, $direction = "asc") {
+  public static function sortNodes(&$nodes = array(), $column, $direction = "asc") {
     self::$sortDirection = $direction;
-    self::$sortColumn = $columm;
-    $nodes = (array) $nodes;
-    usort($nodes, "XHProfGraph::sortNodes");
+    self::$sortColumn = $column;
+    usort($nodes, "XHProfGraph::compareNodes");
   }
 
   public static function compareNodes($a, $b) {
-    if (!isset($a->data[self::$sortColumn])) {
-      return 0;
-    }
-    
-    if ($a->data[self::$sortColumn] == $b->data[self::$sortColumn]) {
+    if ($a->{self::$sortColumn} == $b->{self::$sortColumn}) {
       return 0;
     }
 
     if (self::$sortDirection == "asc") {
-      return ($a->data[self::$sortColumn] > $b->data[self::$sortColumn]) ? 1 : -1;
+      return ($a->{self::$sortColumn} > $b->{self::$sortColumn}) ? 1 : -1;
     } else {
-      return ($a->data[self::$sortColumn] > $b->data[self::$sortColumn]) ? -1 : 1;
+      return ($a->{self::$sortColumn} > $b->{self::$sortColumn}) ? -1 : 1;
     }
   }
 
 }
 
 class XHProfNode {
-  
-  public $method = array();
-  public $data = array();
 
-  public function __construct($method, $data) {
-    $this->method = $method;
-    $this->data = $data;
+  public $run_id;
+  public $fn = '';
+  public $ct = 0;
+  public $wt = 0;
+  public $cpu = 0;
+  public $mu = 0;
+  public $pmu = 0;
+
+  public function __construct($fn, $data, $run_id = 0) {
+    $this->run_id = $run_id;    
+    $this->fn = $fn;
+    foreach ($data as $key => $value) {
+      $this->$key = $value;    
+    }
+  }
+
+  public function asArray() {
+    global $xhprof_data_fields;
+    $array = array();    
+    foreach ($xhprof_data_fields as $field => $name) {
+      switch ($field) {
+        case 'fn':
+          $array['fn'] = l($this->fn, "admin/xhprof/run/{$this->run_id}/{$this->fn}");
+          break;
+        default:
+          $array[$field] = $this->$field;
+      }
+    }
+    return $array;
   }
 }
 
