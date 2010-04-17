@@ -112,7 +112,8 @@ class XHProfGraph {
 
     if (self::$sortDirection == "asc") {
       return ($a->{self::$sortColumn} > $b->{self::$sortColumn}) ? 1 : -1;
-    } else {
+    } 
+    else {
       return ($a->{self::$sortColumn} > $b->{self::$sortColumn}) ? -1 : 1;
     }
   }
@@ -128,6 +129,8 @@ class XHProfNode {
   public $cpu = 0;
   public $mu = 0;
   public $pmu = 0;
+
+  public $calculated_data = array();
 
   public function __construct($fn, $data, $run_id = 0) {
     $this->run_id = $run_id;    
@@ -150,6 +153,13 @@ class XHProfNode {
       }
     }
     return $array;
+  }
+  
+  public function __get($name) {
+    if (!isset($this->calculated_data[$name])) {
+      return NULL;    
+    }    
+    return $this->calculated_data[$name];
   }
 }
 
