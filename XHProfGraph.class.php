@@ -4,6 +4,9 @@ class XHProfGraph {
 
   public $nodes = array();
   public $edges = array();
+  
+  public static $sortDirection = "asc";
+  public static $sortColumn = "ct";
 
   public function __construct($run) {
     foreach ($run->data as $call => $data) {
@@ -29,6 +32,14 @@ class XHProfGraph {
   }
 
   public function addEdge(XHProfEdge $edge) {
+    if (!$this->findNode($edge->node1)) {
+      $this->addNode($edge->node1);
+    }
+    
+    if (!$this->findNode($edge->node2)) {
+      $this->addNode($edge->node2);
+    }    
+    
     if (!$this->findEdge($edge)) {
       $this->edges[] = $edge;
     }
@@ -54,7 +65,7 @@ class XHProfGraph {
     return FALSE;
   }
 
-  public function findConnections($method = "main()") {
+  public function findChildren($method = "main()") {
     $connections = array();
     foreach ($this->edges as $edge) {
       if ($edge->node1->method == $method) {
@@ -72,6 +83,39 @@ class XHProfGraph {
       }
     }
     return $parents;
+  }
+
+  public function nodeForMethod($method) {
+    foreach ($this->nodes as $node) {
+      if ($node->method == $method) {
+        return $node;
+      }
+    }
+
+    return FALSE;
+  }
+  
+  public static function sortNodes($nodes = array(), $column, $direction = "asc") {
+    self::$sortDirection = $direction;
+    self::$sortColumn = $columm;
+    $nodes = (array) $nodes;
+    usort($nodes, "XHProfGraph::sortNodes");
+  }
+
+  public static function compareNodes($a, $b) {
+    if (!isset($a->data[self::$sortColumn])) {
+      return 0;
+    }
+    
+    if ($a->data[self::$sortColumn] == $b->data[self::$sortColumn]) {
+      return 0;
+    }
+
+    if (self::$sortDirection == "asc") {
+      return ($a->data[self::$sortColumn] > $b->data[self::$sortColumn]) ? 1 : -1;
+    } else {
+      return ($a->data[self::$sortColumn] > $b->data[self::$sortColumn]) ? -1 : 1;
+    }
   }
 
 }
@@ -97,3 +141,5 @@ class XHProfEdge {
     $this->node2 = $node2;
   }
 }
+
+

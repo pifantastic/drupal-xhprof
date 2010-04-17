@@ -23,9 +23,16 @@ function xhprof_table_for_method($run, $method) {
     
   $graph = new XHProfGraph($run);
   
+  $current_node = $graph->nodeForMethod($method);
+  $parent_nodes = $graph->findParents($method);
+  $child_nodes = $graph->findChildren($method);
+  
+  XHProfGraph::sortNodes($parent_nodes, 'ct', $_GET['sort']);
+  XHProfGraph::sortNodes($child_nodes, 'ct', $_GET['sort']);
+
   $parents = array();
   $parents[] = array('Parents', '', '', '', '', '', '');
-  foreach ($graph->findParents($method) as $node) {
+  foreach ($parent_nodes as $node) {
     $parents[] = array(
       'fn' =>  l($node->method, 'admin/xhprof/run/'.$run->run_id.'/'.$node->method),
       'ct' => $node->data['ct'],
@@ -36,9 +43,20 @@ function xhprof_table_for_method($run, $method) {
     );
   }
 
+  $current = array();
+  $current[] = array('This Function', '', '', '', '', '', '');
+  $current[] = array(
+    'fn' =>  l($current_node->method, 'admin/xhprof/run/'.$run->run_id.'/'.$current_node->method),
+    'ct' => $current_node->data['ct'],
+    'wt' => $current_node->data['wt'],
+    'cpu' => $current_node->data['cpu'],
+    'mu' => $current_node->data['mu'],
+    'pmu' => $current_node->data['pmu']
+  );
+
   $children = array();
   $children[] = array('Children', '', '', '', '', '', '');
-  foreach ($graph->findConnections($method) as $node) {
+  foreach ($child_nodes as $node) {
     $children[] = array(
       'fn' =>  l($node->method, 'admin/xhprof/run/'.$run->run_id.'/'.$node->method),
       'ct' => $node->data['ct'],
@@ -48,8 +66,8 @@ function xhprof_table_for_method($run, $method) {
       'pmu' => $node->data['pmu']
     );
   }
-
-  $rows = array_merge($parents, $children);
+  
+  $rows = array_merge($parents, $current, $children);
   
   return theme_table($header, $rows, $attributes);
 }
