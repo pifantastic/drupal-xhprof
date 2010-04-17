@@ -5,9 +5,11 @@
  */
 
 $GLOBALS['xhprof_sort_col'] = 'ct';
-$GLOBALS['xhprof_sort_order'] = $_GET['sort'];
+$GLOBALS['xhprof_sort_order'] = isset($_GET['sort']) ? $_GET['sort'] : 'desc';
 
-function xhprof_table_for_method($run, $method = "main()") {
+function xhprof_table_for_method($run, $method) {
+  require_once drupal_get_path('module', 'xhprof') . "/XHProfGraph.class.php";
+
   $header = array(
     array("data" => "Function Name", 'field' => 'fn'),
     array("data" => "Calls", 'field' => 'ct'),
@@ -18,57 +20,41 @@ function xhprof_table_for_method($run, $method = "main()") {
   );
   
   $attributes = array("id" => "xhprof-run-details-table");
+    
+  $graph = new XHProfGraph($run);
   
-  // KLUDGE
-  xhprof_sort_field($header);
-  
-  $children = array();
-  foreach ($run->data as $call => $info) {
-    list($parent, $child) = explode('==>', $call);
-    if ($parent === $method and $child) {
-      $children[$child] = $info;
-    }
-  }
-  
-  $rows = array();
-  foreach ($children as $child => $info) {
-    $rows[] = array(
-      'fn' =>  l($child, 'admin/xhprof/run/'.$run->run_id.'/'.$child),
-      'ct' => $info['ct'],
-      'wt' => $info['wt'],
-      'cpu' => $info['cpu'],
-      'mu' => $info['mu'],
-      'pmu' => $info['pmu']
+  $parents = array();
+  $parents[] = array('Parents', '', '', '', '', '', '');
+  foreach ($graph->findParents($method) as $node) {
+    $parents[] = array(
+      'fn' =>  l($node->method, 'admin/xhprof/run/'.$run->run_id.'/'.$node->method),
+      'ct' => $node->data['ct'],
+      'wt' => $node->data['wt'],
+      'cpu' => $node->data['cpu'],
+      'mu' => $node->data['mu'],
+      'pmu' => $node->data['pmu']
     );
   }
-  
-  usort($rows, "xhprof_sort_run_data");
+
+  $children = array();
+  $children[] = array('Children', '', '', '', '', '', '');
+  foreach ($graph->findConnections($method) as $node) {
+    $children[] = array(
+      'fn' =>  l($node->method, 'admin/xhprof/run/'.$run->run_id.'/'.$node->method),
+      'ct' => $node->data['ct'],
+      'wt' => $node->data['wt'],
+      'cpu' => $node->data['cpu'],
+      'mu' => $node->data['mu'],
+      'pmu' => $node->data['pmu']
+    );
+  }
+
+  $rows = array_merge($parents, $children);
   
   return theme_table($header, $rows, $attributes);
 }
 
-function xhprof_sort_run_data($a, $b) {
-  global $xhprof_sort_col;
-  global $xhprof_sort_order;
-  
-  if ($a[$xhprof_sort_col] == $b[$xhprof_sort_col]) {
-    return 0;
-  }
 
-  if ($xhprof_sort_order === 'desc') {
-    return ($a[$xhprof_sort_col] > $b[$xhprof_sort_col]) ? -1 : 1;
-  } else {
-    return ($a[$xhprof_sort_col] > $b[$xhprof_sort_col]) ? 1 : -1;
-  }
-}
 
-function xhprof_sort_field($header) {
-  foreach ($header as $h) {
-    if ($h['data'] === $_GET['order']) {
-      global $xhprof_sort_col;
-      $xhprof_sort_col = $h['field'];
-    }
-  }
-}
 
 

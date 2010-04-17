@@ -96,8 +96,6 @@ function xhprof_exit() {
   $xhprof_runs = new XHProfRuns_Default();
   $run_id = $xhprof_runs->save_run($xhprof_data, XHPROF_SOURCE);
   
-  krumo($xhprof_data);
-  
   // Calculate run totals  
   $total_calls = array_reduce($xhprof_data, 'xhprof_sum_calls');
   $total_memory = array_reduce($xhprof_data, 'xhprof_sum_memory');
@@ -237,7 +235,7 @@ function xhprof_runs_view_details($run_id, $method = "main()") {
   require_once "$module_path/xhprof.inc";
   
   $url = "$base_url/$module_path/xhprof_html/index.php?run=$run_id&source=".XHPROF_SOURCE;
-    
+  
   $run = xhprof_get_run($run_id);
     
   $content = array();
