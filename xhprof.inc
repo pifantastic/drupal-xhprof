@@ -13,29 +13,30 @@ $GLOBALS['xhprof_data_fields'] = array(
   'pmu' => 'Incl. Peal Mem Ise (bytes)'
 );
 
-function xhprof_table_for_fn($run, $fn) {
+function xhprof_table_for_fn($run, $fn = "main()") {
   global $xhprof_data_fields;
-  
-  require_once drupal_get_path('module', 'xhprof') . "/XHProfGraph.class.php";
-  
   $sort_column = 'ct';
 
+  // Table attributes
+  $attributes = array("id" => "xhprof-run-details-table");
+
+  // Table header
   $header = array();
   foreach ($xhprof_data_fields as $field => $data) {
     $header[] = array('data' => $data, 'field' => $field);
+
+    // Silly KLUDGE to set the 
     if ($data == $_GET['order']) {
       $sort_column = $field;
     }
   }
-
-  $attributes = array("id" => "xhprof-run-details-table");
     
-  $graph = new XHProfGraph($run);
+  // Get current, child and parent nodes for this function
+  $current_node = $run->graph->findNode($fn);
+  $parent_nodes = $run->graph->findParents($fn);
+  $child_nodes = $run->graph->findChildren($fn);
   
-  $current_node = $graph->findNode($fn);
-  $parent_nodes = $graph->findParents($fn);
-  $child_nodes = $graph->findChildren($fn);
-
+  // Sort nodes using $_GET['sort']
   XHProfGraph::sortNodes($parent_nodes, $sort_column, $_GET['sort']);
   XHProfGraph::sortNodes($child_nodes, $sort_column, $_GET['sort']);
 
@@ -56,11 +57,6 @@ function xhprof_table_for_fn($run, $fn) {
   }
 
   $rows = array_merge($parents, $current, $children);
-  
   return theme_table($header, $rows, $attributes);
 }
-
-
-
-
 

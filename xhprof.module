@@ -233,34 +233,17 @@ function xhprof_runs_view_details($run_id, $method = "main()") {
     
   $module_path = drupal_get_path('module', 'xhprof');
   require_once "$module_path/xhprof.inc";
-  
+  require_once "$module_path/XHProfRun.class.php";
+
   $url = "$base_url/$module_path/xhprof_html/index.php?run=$run_id&source=".XHPROF_SOURCE;
   
-  $run = xhprof_get_run($run_id);
+  $run = new XHProfRun($run_id);
     
   $content = array();
   $content[] = l("View XHProf HTML Report", $url);
   $content[] = xhprof_table_for_fn($run, $method);
   
   return implode("\n", $content);
-}
-
-function xhprof_get_run($run_id, $source = XHPROF_SOURCE) {
-  $dir = ini_get("xhprof.output_dir");
-  $file = "$dir/$run_id.$source";
-    
-  if (!file_exists($file)) {
-    return FALSE;
-  }
-    
-  $result = db_query("SELECT * FROM {xhprof_runs} WHERE run_id = %d", $run_id);
-  $run = db_fetch_object($result);
-  
-  if ($run !== FALSE) {
-    $run->data = unserialize(file_get_contents($file));
-  }
-   
-  return $run;
 }
 
 /**

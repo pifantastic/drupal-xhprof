@@ -2,25 +2,27 @@
 
 class XHProfGraph {
   
-  public $run;  
-  
+  public $run_id;  
+  public $run_data;
+
   public $nodes = array();
   public $edges = array();
   
   public static $sortDirection = "asc";
   public static $sortColumn = "ct";
 
-  public function __construct($run) {
-    $this->run = $run;
+  public function __construct($run_id, $run_data) {
+    $this->run_id = $run_id;
+    $this->run_data = $run_data;
 
-    foreach ($run->data as $call => $data) {
+    foreach ($run_data as $call => $data) {
       list($parent_fn, $child_fn) = explode('==>', $call);
       
-      $parent_node = new XHProfNode($parent_fn, $data, $run->run_id);
+      $parent_node = new XHProfNode($parent_fn, $data, $run_id);
       $this->addNode($parent_node);
       
       if ($child_fn) {
-        $child_node = new XHProfNode($child_fn, $data, $run->run_id);
+        $child_node = new XHProfNode($child_fn, $data, $run_id);
         $this->addNode($child_node);
         
         $edge = new XHProfEdge($parent_node, $child_node);
