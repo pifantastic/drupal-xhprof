@@ -70,13 +70,13 @@ class XHProfGraph {
   }
 
   public function findChildren($fn = "main()") {
-    $connections = array();
+    $children = array();
     foreach ($this->edges as $edge) {
       if ($edge->node1->fn == $fn) {
-        $connections[] = $edge->node2;
+        $children[] = $edge->node2;
       }
     }
-    return $connections;
+    return $children;
   }
   
   public function findParents($fn = "main()") {
@@ -110,7 +110,7 @@ class XHProfGraph {
       return 0;
     }
 
-    if (self::$sortDirection == "asc") {
+    if (strtolower(self::$sortDirection) == "asc") {
       return ($a->{self::$sortColumn} > $b->{self::$sortColumn}) ? 1 : -1;
     } 
     else {
