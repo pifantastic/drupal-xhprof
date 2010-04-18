@@ -79,6 +79,25 @@ class XHProfGraph {
     }
     return $children;
   }
+
+  // I don't know if this makes any sense yet
+  public function findSiblings($fn = "main()") {
+    $parents = $this->findParents($fn);
+    $siblings = array();
+
+    if (count($parents) == 0) {
+      return $siblings;
+    }
+    
+    foreach ($this->edges as $edge) {
+      foreach ($parents as $parent) {
+        if ($parent->fn == $edge->node1->fn) {
+          $siblings[$edge->node2->fn] = $edge->node2;
+        }
+      }
+    }
+    return $siblings;
+  }
   
   public function findParents($fn = "main()") {
     $parents = array();    
@@ -90,13 +109,17 @@ class XHProfGraph {
     return $parents;
   }
   
-  public static function sortNodes(&$nodes = array(), $column, $direction = "asc") {
+  public static function sortNodes(&$nodes = array(), $column = 'ct', $direction = "asc") {
     self::$sortDirection = $direction;
     self::$sortColumn = $column;
     usort($nodes, "XHProfGraph::compareNodes");
   }
 
   public static function compareNodes($a, $b) {
+    if (!isset($a->{self::$sortColumn}) and !isset($b->{self::$sortColumn})) {
+      return 0;
+    }
+    
     if ($a->{self::$sortColumn} == $b->{self::$sortColumn}) {
       return 0;
     }
@@ -123,7 +146,7 @@ class XHProfNode {
 
   public $calculated_data = array();
 
-  public function __construct($fn, $data, $run_id = 0) {
+  public function __construct($fn, $data, $run_id) {
     $this->run_id = $run_id;    
     $this->fn = $fn;
     foreach ($data as $key => $value) {

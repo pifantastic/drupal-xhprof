@@ -18,9 +18,14 @@ function xhprof_table_for_fn($run, $fn) {
   
   require_once drupal_get_path('module', 'xhprof') . "/XHProfGraph.class.php";
   
+  $sort_column = 'ct';
+
   $header = array();
   foreach ($xhprof_data_fields as $field => $data) {
     $header[] = array('data' => $data, 'field' => $field);
+    if ($data == $_GET['order']) {
+      $sort_column = $field;
+    }
   }
 
   $attributes = array("id" => "xhprof-run-details-table");
@@ -30,9 +35,9 @@ function xhprof_table_for_fn($run, $fn) {
   $current_node = $graph->findNode($fn);
   $parent_nodes = $graph->findParents($fn);
   $child_nodes = $graph->findChildren($fn);
-  
-  XHProfGraph::sortNodes($parent_nodes, 'ct', $_GET['sort']);
-  XHProfGraph::sortNodes($child_nodes, 'ct', $_GET['sort']);
+
+  XHProfGraph::sortNodes($parent_nodes, $sort_column, $_GET['sort']);
+  XHProfGraph::sortNodes($child_nodes, $sort_column, $_GET['sort']);
 
   $parents = array();
   $parents[] = array('<strong>Parents</strong>');

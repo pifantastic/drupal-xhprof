@@ -239,7 +239,7 @@ function xhprof_runs_view_details($run_id, $method = "main()") {
   $run = xhprof_get_run($run_id);
     
   $content = array();
-  $content[] = l("View xhprof Report", $url);
+  $content[] = l("View XHProf HTML Report", $url);
   $content[] = xhprof_table_for_fn($run, $method);
   
   return implode("\n", $content);
