@@ -50,8 +50,9 @@ class XHProfGraph {
   }
 
   public function findNode($node) {
+    $fn = (is_object($node)) ? $node->fn : $node;
     foreach ($this->nodes as $n) {
-      if ($node->fn == $n->fn) {
+      if ($n->fn == $fn) {
         return $n;
       }
     }
@@ -87,16 +88,6 @@ class XHProfGraph {
       }
     }
     return $parents;
-  }
-
-  public function nodeForFn($fn) {
-    foreach ($this->nodes as $node) {
-      if ($node->fn == $fn) {
-        return $node;
-      }
-    }
-
-    return FALSE;
   }
   
   public static function sortNodes(&$nodes = array(), $column, $direction = "asc") {

@@ -27,7 +27,7 @@ function xhprof_table_for_fn($run, $fn) {
     
   $graph = new XHProfGraph($run);
   
-  $current_node = $graph->nodeForFn($fn);
+  $current_node = $graph->findNode($fn);
   $parent_nodes = $graph->findParents($fn);
   $child_nodes = $graph->findChildren($fn);
   
