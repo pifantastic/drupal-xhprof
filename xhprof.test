@@ -1,0 +1,37 @@
+<?php
+
+/**
+ * @file
+ */
+
+class XHProfTestCase extends DrupalWebTestCase {
+  protected $privileged_user;
+
+  public static function getInfo() {
+    return array(
+      'name' => 'XHProf Test Case',
+      'description' => 'TODO',
+      'group' => 'XHProf',
+    );
+  }
+
+  public function setUp() {
+    parent::setUp('xhprof');
+    
+    $this->privileged_user = $this->drupalCreateUser(array('administer site configuration'));
+    $this->drupalLogin($this->privileged_user);
+  }
+
+  public function testCreateRun() {
+    variable_set("xhprof_include_paths", "user*");
+    variable_set("xhprof_exclude_paths", "admin*");
+    
+    $this->drupalGet('user/1');
+    $this->drupalGet('/admin/xhprof/runs');
+    $this->assertText('user/1', "A new run for user/1 should have been created");
+    $this->assertNoText('admin/xhprof/runs', "No run should have been created for admin/*");
+  }
+
+}
+
+
