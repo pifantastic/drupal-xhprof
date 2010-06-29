@@ -11,18 +11,17 @@ class XHProfGraph {
   public static $sortDirection = "asc";
   public static $sortColumn = "ct";
 
-  public function __construct($run_id, $run_data) {
-    $this->run_id = $run_id;
+  public function __construct($run_data) {
     $this->run_data = $run_data;
 
     foreach ($run_data as $call => $data) {
       list($parent_fn, $child_fn) = explode('==>', $call);
       
-      $parent_node = new XHProfNode($parent_fn, $data, $run_id);
+      $parent_node = new XHProfNode($parent_fn, $data);
       $this->addNode($parent_node);
       
       if ($child_fn) {
-        $child_node = new XHProfNode($child_fn, $data, $run_id);
+        $child_node = new XHProfNode($child_fn, $data);
         $this->addNode($child_node);
         
         $edge = new XHProfEdge($parent_node, $child_node);
@@ -138,7 +137,6 @@ class XHProfGraph {
 
 class XHProfNode {
 
-  public $run_id;
   public $fn = '';
   public $ct = 0;
   public $wt = 0;
@@ -148,8 +146,7 @@ class XHProfNode {
 
   public $calculated_data = array();
 
-  public function __construct($fn, $data, $run_id) {
-    $this->run_id = $run_id;    
+  public function __construct($fn, $data) {
     $this->fn = $fn;
     foreach ($data as $key => $value) {
       $this->$key = $value;    
@@ -160,13 +157,7 @@ class XHProfNode {
     global $xhprof_data_fields;
     $array = array();    
     foreach ($xhprof_data_fields as $field => $name) {
-      switch ($field) {
-        case 'fn':
-          $array['fn'] = l($this->fn, "admin/xhprof/run/{$this->run_id}/{$this->fn}");
-          break;
-        default:
-          $array[$field] = $this->$field;
-      }
+      $array[$field] = $this->$field;
     }
     return $array;
   }

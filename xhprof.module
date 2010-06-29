@@ -7,13 +7,13 @@
  */
 
 /**
- * XHProf calls this both 'source' and 'run_type'.
- * It's basically a way to namespace XHProf runs.
+ *  XHProf calls this both 'source' and 'run_type'.
+ *  It's basically a way to namespace XHProf runs.
  */
 define('XHPROF_SOURCE', 'drupal_xhprof');
 
 /**
- * Set to true when XHProf profiling has started.
+ *  Set to true when XHProf profiling has started.
  */
 $xhprof_profiling_started = false;
 
@@ -21,6 +21,8 @@ $xhprof_profiling_started = false;
  * Implementation of hook_menu().
  */
 function xhprof_menu() {
+  $items = array();
+
   $items['admin/settings/xhprof'] = array(
     'title' => 'XHProf Settings',
     'description' => 'XHProf Settings',
@@ -28,8 +30,7 @@ function xhprof_menu() {
     'page arguments' => array('xhprof_admin_settings'),
     'access arguments' => array('administer site configuration'),
     'type' => MENU_NORMAL_ITEM
-  );
-  	
+  );  	
   $items['admin/xhprof/runs'] = array(
     'title' => 'XHProf Runs',
     'description' => 'XHProf Runs',
@@ -37,23 +38,7 @@ function xhprof_menu() {
     'access arguments' => array('administer site configuration'),
     'type' => MENU_NORMAL_ITEM
   );
-	
-  $items['admin/xhprof/run/%'] = array(
-    'title' => 'XHProf Run Details',
-    'description' => 'XHProf Run Details',
-    'page callback' => 'xhprof_runs_view_details',
-    'page arguments' => array(3),
-    'access arguments' => array('administer site configuration')
-  );
 
-  $items['admin/xhprof/run/%/%'] = array(
-    'title' => 'XHProf Run Details',
-    'description' => 'XHProf Run Details',
-    'page callback' => 'xhprof_runs_view_details',
-    'page arguments' => array(3, 4),
-    'access arguments' => array('administer site configuration')
-  );
-  
 	return $items;
 }
 
@@ -106,9 +91,8 @@ function xhprof_exit() {
     INSERT INTO {xhprof_runs} 
       (run_id, url, data, time, calls, memory, cpu, created) 
     VALUES 
-      ('%s',  '%s', '%s',   %d,    %d,     %d,  %d,      %d)
-  ";
-    
+      ('%s',  '%s', '%s',   %d,    %d,     %d,  %d,      %d)";
+  
   $args = array(
     $run_id,
     $_GET['q'],
@@ -127,13 +111,14 @@ function xhprof_exit() {
  * XHProf admin settings
  */
 function xhprof_admin_settings() {
+  $form = array();
+
   $form['xhprof_include_paths'] = array( 
     '#type' => 'textarea',
     '#title' => t('Paths to include in profiling'), 
     '#default_value' => variable_get('xhprof_include_paths', NULL), 
     '#description' => t('XHProf will profile this list of paths.'), 
   );
-
   $form['xhprof_exclude_paths'] = array( 
     '#type' => 'textarea',
     '#title' => t('Paths to exclude in profiling'), 
@@ -148,12 +133,13 @@ function xhprof_admin_settings() {
  * XHProf runs table form
  */
 function xhprof_runs_view_form() {
+  $form = array();
+
   $form['clear'] = array(
     '#type' => 'submit',
     '#value' => t('Clear All Runs'),
     '#id' => 'xhprof-clear-runs'
-  );
-  
+  );  
   $form['refresh'] = array(
     '#type' => 'submit',
     '#value' => t('Refresh'),
@@ -183,7 +169,9 @@ function xhprof_runs_view_form_submit($form, &$form_state) {
  * XHProf runs table
  */
 function xhprof_runs_view() {
-  $content = array();
+  global $base_url;
+  $module_path = drupal_get_path('module', 'xhprof');
+  $url = "$base_url/$module_path/xhprof_html/index.php?run=%s&source=".XHPROF_SOURCE;
   
   drupal_add_js(drupal_get_path("module", "xhprof") . "/xhprof.js");
   drupal_add_css(drupal_get_path("module", "xhprof") . "/xhprof.css");
@@ -208,7 +196,7 @@ function xhprof_runs_view() {
   $rows = array();
   while ($data = db_fetch_object($result)) {
     $row = array();
-    $row[] = array('data' => l($data->run_id, 'admin/xhprof/run/'.$data->run_id));
+    $row[] = array('data' => l($data->run_id, sprintf($url, $data->run_id)));
     $row[] = array('data' => l($data->url, $data->url));
     $row[] = array('data' => number_format($data->time / 1000) . ' ms', 'class' => xhprof_class_from_time($data->time));
     $row[] = array('data' => number_format($data->calls));
@@ -218,30 +206,10 @@ function xhprof_runs_view() {
     $rows[] = $row;
   }
   
+  $content = array();
   $content[] = drupal_get_form('xhprof_runs_view_form');
   $content[] = theme_table($header, $rows, $attributes);
   $content[] = theme_pager(NULL, 25);
-  
-  return implode("\n", $content);
-}
-
-/**
- * XHProf run detail page.
- */
-function xhprof_runs_view_details($run_id, $method = "main()") {
-  global $base_url;
-    
-  $module_path = drupal_get_path('module', 'xhprof');
-  require_once "$module_path/xhprof.inc";
-  require_once "$module_path/XHProfRun.class.php";
-
-  $url = "$base_url/$module_path/xhprof_html/index.php?run=$run_id&source=".XHPROF_SOURCE;
-  
-  $run = new XHProfRun($run_id);
-    
-  $content = array();
-  $content[] = l("View XHProf HTML Report", $url);
-  $content[] = xhprof_table_for_fn($run, $method);
   
   return implode("\n", $content);
 }
@@ -263,7 +231,7 @@ function xhprof_profiling_enabled() {
   $path = drupal_get_path_alias($_GET['q']);
 
   return (bool) (drupal_match_path($path, variable_get("xhprof_include_paths", '')) 
-      and !drupal_match_path($path, variable_get("xhprof_exclude_paths", '')));
+      && !drupal_match_path($path, variable_get("xhprof_exclude_paths", '')));
 }
 
 /**
@@ -274,13 +242,13 @@ function xhprof_sum_memory($total, $data) { return $total + $data['mu']; }
 function xhprof_sum_cpu($total, $data) { return $total + $data['cpu']; }
 
 /**
- * Return a CSS class indicating the relative speed of $time.
+ *  Return a CSS class indicating the relative speed of $time.
  */
 function xhprof_class_from_time($time) {
   $classes = array(
-    'xhprof-green' => 300000,
-    'xhprof-yellow' => 1000000,
-    'xhprof-red' => PHP_MAX_INT
+    'xhprof-green' => 300000,   // < 300ms
+    'xhprof-yellow' => 1000000, // < 1s
+    'xhprof-red' => PHP_MAX_INT // > 1s
   );
   
   foreach ($classes as $class => $threshold) {
