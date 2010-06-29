@@ -28,14 +28,14 @@ function xhprof_menu() {
     'description' => 'XHProf Settings',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('xhprof_admin_settings'),
-    'access arguments' => array('administer XHProf runs'),
+    'access arguments' => array('administer XHProf'),
     'type' => MENU_NORMAL_ITEM
   );  	
   $items['admin/xhprof/runs'] = array(
     'title' => 'XHProf Runs',
     'description' => 'XHProf Runs',
     'page callback' => 'xhprof_runs_view',
-    'access arguments' => array('view XHProf runs'),
+    'access arguments' => array('view XHProf data'),
     'type' => MENU_NORMAL_ITEM
   );
 
@@ -46,7 +46,7 @@ function xhprof_menu() {
  * Implementation of hook_perm().
  */
 function xhprof_perm() {
-  return array('administer XHProf runs', 'view XHProf runs');
+  return array('administer XHProf', 'view XHProf data');
 }
 
 /**
@@ -163,7 +163,7 @@ function xhprof_runs_view_form_submit($form, &$form_state) {
   $op = $form_state['clicked_button']['#value'];
   
   if ($op == t('Clear All Runs')) {
-    if (!user_access('administer XHProf runs')) {
+    if (!user_access('administer XHProf')) {
       drupal_set_message(t("You do not have permission to clear XHProf run data."), 'warning');
       return;
     }

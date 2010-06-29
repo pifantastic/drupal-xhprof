@@ -10,7 +10,7 @@ class XHProfTestCase extends DrupalWebTestCase {
   public static function getInfo() {
     return array(
       'name' => 'XHProf Test Case',
-      'description' => 'TODO',
+      'description' => 'Test that XHProf runs can be successfully recorded.',
       'group' => 'XHProf',
     );
   }
@@ -18,7 +18,7 @@ class XHProfTestCase extends DrupalWebTestCase {
   public function setUp() {
     parent::setUp('xhprof');
     
-    $this->privileged_user = $this->drupalCreateUser(array('administer site configuration'));
+    $this->privileged_user = $this->drupalCreateUser(array('administer XHProf', 'view XHProf data'));
     $this->drupalLogin($this->privileged_user);
   }
 
@@ -31,7 +31,6 @@ class XHProfTestCase extends DrupalWebTestCase {
     $this->assertText('user/1', "A new run for user/1 should have been created");
     $this->assertNoText('admin/xhprof/runs', "No run should have been created for admin/*");
   }
-
 }
 
 
