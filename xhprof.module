@@ -169,10 +169,6 @@ function xhprof_runs_view_form_submit($form, &$form_state) {
  * XHProf runs table
  */
 function xhprof_runs_view() {
-  global $base_url;
-  $module_path = drupal_get_path('module', 'xhprof');
-  $url = "$base_url/$module_path/xhprof_html/index.php?run=%s&source=".XHPROF_SOURCE;
-  
   drupal_add_js(drupal_get_path("module", "xhprof") . "/xhprof.js");
   drupal_add_css(drupal_get_path("module", "xhprof") . "/xhprof.css");
   
@@ -181,7 +177,7 @@ function xhprof_runs_view() {
   
   // Table header
   $header = array();
-  $header[] = array('data' => 'ID', 'field' => 'run_id');
+  $header[] = array('data' => 'View');
   $header[] = array('data' => 'Url', 'field' => 'url');
   $header[] = array('data' => 'Time', 'field' => 'time');
   $header[] = array('data' => 'Function Calls', 'field' => 'calls');
@@ -196,7 +192,7 @@ function xhprof_runs_view() {
   $rows = array();
   while ($data = db_fetch_object($result)) {
     $row = array();
-    $row[] = array('data' => l($data->run_id, sprintf($url, $data->run_id)));
+    $row[] = array('data' => l(t('details'), xhprof_url('details', $data->run_id)).'&nbsp;&nbsp;'.l(t('graph'), xhprof_url('graph', $data->run_id)));
     $row[] = array('data' => l($data->url, $data->url));
     $row[] = array('data' => number_format($data->time / 1000) . ' ms', 'class' => xhprof_class_from_time($data->time));
     $row[] = array('data' => number_format($data->calls));
@@ -265,5 +261,19 @@ function xhprof_delete_run_file($id, $source) {
   $dir = ini_get("xhprof.output_dir");
   $file = "$dir/$id.$source";
   return (bool) (is_dir($dir) and is_file($file) and unlink($file));
+}
+
+function xhprof_url($type, $run_id) {
+  global $base_url;
+  $module_path = drupal_get_path('module', 'xhprof');
+  
+  switch($type) {
+    case 'details':
+      return "$base_url/$module_path/xhprof_html/index.php?run=$run_id&source=".XHPROF_SOURCE;
+    case 'graph':
+      return "$base_url/$module_path/xhprof_html/callgraph.php?run=$run_id&source=".XHPROF_SOURCE;
+    default:
+      return '';
+  }
 }
 
