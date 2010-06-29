@@ -1,11 +1,3 @@
-td.xhprof-green {
-  color: #185E00;
-}
-
-td.xhprof-yellow {
-  color: #C9B200;
-}
-
-td.xhprof-red {
-  color: #820000;
-}
+td.xhprof-green  { color: #185E00 }
+td.xhprof-yellow { color: #C9B200 }
+td.xhprof-red    { color: #820000 }
