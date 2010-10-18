@@ -235,7 +235,8 @@ function xhprof_profiling_enabled() {
   if (isset($_GET['XHPROF_DISABLED'])) {
     return false;
   }
-
+  
+  drupal_init_path();
   $path = drupal_get_path_alias($_GET['q']);
 
   return (bool) (drupal_match_path($path, variable_get("xhprof_include_paths", '')) 
