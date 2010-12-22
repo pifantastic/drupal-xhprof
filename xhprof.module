@@ -236,6 +236,8 @@ function xhprof_profiling_enabled() {
     return false;
   }
   
+  drupal_init_language();
+
   drupal_init_path();
   $path = drupal_get_path_alias($_GET['q']);
 
